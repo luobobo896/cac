@@ -5,6 +5,7 @@
 case "$1" in
     setup)          cmd_setup         ;;
     add)            cmd_add  "${@:2}" ;;
+    rm|remove)      cmd_rm   "${@:2}" ;;
     ls|list)        cmd_ls            ;;
     check)          cmd_check         ;;
     stop)           cmd_stop          ;;

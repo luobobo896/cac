@@ -101,6 +101,28 @@ cmd_switch() {
     echo "$(_green "✓") 已切换到 $(_bold "$name")"
 }
 
+cmd_rm() {
+    _require_setup
+    if [[ $# -lt 1 ]]; then
+        echo "用法：cac rm <名字>" >&2; exit 1
+    fi
+
+    local name="$1"
+    _require_env "$name"
+
+    local current; current=$(_current_env)
+    if [[ "$name" == "$current" ]]; then
+        echo "错误：'$name' 是当前激活的环境，请先切换到其他环境再删除" >&2; exit 1
+    fi
+
+    printf "确认删除环境 '%s'？[yes/N] " "$(_bold "$name")"
+    read -r confirm
+    [[ "$confirm" == "yes" ]] || { echo "已取消。"; exit 0; }
+
+    rm -rf "$ENVS_DIR/$name"
+    echo "$(_green "✓") 环境 '$(_bold "$name")' 已删除"
+}
+
 cmd_ls() {
     _require_setup
 

@@ -104,6 +104,7 @@ claude
 | `cac add <名字> <host:port:u:p>` | 添加新配置 |
 | `cac <名字>` | 切换配置，刷新所有隐私参数 |
 | `cac ls` | 列出所有配置 |
+| `cac rm <名字>` | 删除指定配置（需要 yes 确认） |
 | `cac check` | 检查代理连通性和当前隐私参数 |
 | `cac stop` | 临时停用保护 |
 | `cac -c` | 恢复保护 |
@@ -248,6 +249,7 @@ On first use, run `/login` inside Claude Code to authenticate.
 | `cac add <name> <host:port:u:p>` | Add a new profile |
 | `cac <name>` | Switch profile, refresh all privacy parameters |
 | `cac ls` | List all profiles |
+| `cac rm <name>` | Delete a profile (requires yes confirmation) |
 | `cac check` | Check proxy connectivity and current privacy parameters |
 | `cac stop` | Temporarily disable protection |
 | `cac -c` | Re-enable protection |

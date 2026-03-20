@@ -9,6 +9,7 @@ $(_bold "用法：")
   cac add <名字> <host:port:u:p>    添加新环境（需要 yes 确认）
   cac <名字>                        切换到指定环境
   cac ls                            列出所有环境
+  cac rm <名字>                     删除指定环境（需要 yes 确认）
   cac check                         核查当前环境（代理 + 出口 IP）
   cac stop                          临时停用，claude 裸跑
   cac -c                            恢复停用
