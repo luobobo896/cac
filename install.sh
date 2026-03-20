@@ -2,7 +2,7 @@
 # install.sh — cac 一键安装脚本
 set -euo pipefail
 
-REPO="https://raw.githubusercontent.com/nmhjklnm/cac/master"
+REPO="https://raw.githubusercontent.com/luobobo896/cac/master"
 BIN_DIR="$HOME/bin"
 CAC_BIN="$HOME/.cac/bin"
 
