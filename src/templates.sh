@@ -48,15 +48,16 @@ fi
 export HTTPS_PROXY="$PROXY" HTTP_PROXY="$PROXY" ALL_PROXY="$PROXY"
 export NO_PROXY="localhost,127.0.0.1"
 export PATH="$CAC_DIR/shim-bin:$PATH"
-# OTel 遥测默认 off，显式置空防止外层误开
-export CLAUDE_CODE_ENABLE_TELEMETRY=
+# OTel 遥测默认 off
+export CLAUDE_CODE_ENABLE_TELEMETRY=0
 # 清除第三方 API 配置，强制走 OAuth 官方端点
 unset ANTHROPIC_BASE_URL
 unset ANTHROPIC_AUTH_TOKEN
 unset ANTHROPIC_API_KEY
 
-[[ -f "$_env_dir/tz" ]]   && export TZ=$(tr -d '[:space:]' < "$_env_dir/tz")
-[[ -f "$_env_dir/lang" ]] && export LANG=$(tr -d '[:space:]' < "$_env_dir/lang")
+[[ -f "$_env_dir/tz" ]]       && export TZ=$(tr -d '[:space:]' < "$_env_dir/tz")
+[[ -f "$_env_dir/lang" ]]     && export LANG=$(tr -d '[:space:]' < "$_env_dir/lang")
+[[ -f "$_env_dir/hostname" ]] && export HOSTNAME=$(tr -d '[:space:]' < "$_env_dir/hostname")
 
 # 执行真实 claude
 _real=$(tr -d '[:space:]' < "$CAC_DIR/real_claude")
@@ -89,13 +90,15 @@ if [[ ! -f "$_uuid_file" ]]; then
     exit 0
 fi
 FAKE_UUID=$(tr -d '[:space:]' < "$_uuid_file")
+_serial_file="$CAC_DIR/envs/$(tr -d '[:space:]' < "$CAC_DIR/current" 2>/dev/null)/serial"
+FAKE_SERIAL=$([ -f "$_serial_file" ] && tr -d '[:space:]' < "$_serial_file" || echo "C02FAKE000001")
 
 cat <<EOF
 +-o Root  <class IORegistryEntry, id 0x100000100, retain 11>
   +-o J314sAP  <class IOPlatformExpertDevice, id 0x100000101, registered, matched, active, busy 0 (0 ms), retain 28>
     {
       "IOPlatformUUID" = "$FAKE_UUID"
-      "IOPlatformSerialNumber" = "C02FAKE000001"
+      "IOPlatformSerialNumber" = "$FAKE_SERIAL"
       "manufacturer" = "Apple Inc."
       "model" = "Mac14,5"
     }

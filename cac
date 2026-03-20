@@ -18,6 +18,25 @@ _yellow() { printf '\033[33m%s\033[0m' "$*"; }
 _new_uuid()    { uuidgen | tr '[:lower:]' '[:upper:]'; }
 _new_sid()     { uuidgen | tr '[:upper:]' '[:lower:]'; }
 _new_user_id() { python3 -c "import os; print(os.urandom(32).hex())"; }
+_new_serial()  { python3 -c "import random,string; print('C02'+''.join(random.choices(string.ascii_uppercase+string.digits,k=8)))"; }
+_new_hostname(){ python3 -c "import random; print('MacBook-Pro-%04X' % random.randint(0,0xFFFF))"; }
+_now_iso()     { python3 -c "import datetime; print(datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='milliseconds').replace('+00:00','Z'))"; }
+
+_minimal_claude_json() {
+    local user_id="$1" first_start="$2"
+    python3 -c "import json; print(json.dumps({
+        'numStartups': 0,
+        'installMethod': 'native',
+        'autoUpdates': False,
+        'tipsHistory': {},
+        'firstStartTime': '${first_start}',
+        'userID': '${user_id}',
+        'hasCompletedOnboarding': False,
+        'projects': {},
+        'githubRepoPaths': {},
+        'skillUsage': {}
+    }, indent=2))"
+}
 
 # host:port:user:pass → http://user:pass@host:port
 _parse_proxy() {
@@ -75,18 +94,18 @@ _update_statsig() {
     done
 }
 
-_update_claude_json_user_id() {
-    local user_id="$1"
+_swap_claude_json() {
+    local new_name="$1"
     local claude_json="$HOME/.claude.json"
-    [[ -f "$claude_json" ]] || return 0
-    python3 -c "
-import json, sys
-with open('$claude_json') as f:
-    d = json.load(f)
-d['userID'] = '$user_id'
-with open('$claude_json', 'w') as f:
-    json.dump(d, f, indent=2, ensure_ascii=False)
-" && return 0 || echo "警告：更新 ~/.claude.json userID 失败" >&2
+    # 备份当前 profile 的 JSON
+    local current_name; current_name=$(_current_env)
+    if [[ -n "$current_name" && -f "$claude_json" && -d "$ENVS_DIR/$current_name" ]]; then
+        cp "$claude_json" "$ENVS_DIR/$current_name/claude.json"
+    fi
+    # 恢复新 profile 的 JSON
+    if [[ -f "$ENVS_DIR/$new_name/claude.json" ]]; then
+        cp "$ENVS_DIR/$new_name/claude.json" "$claude_json"
+    fi
 }
 
 # ━━━ templates.sh ━━━
@@ -139,15 +158,16 @@ fi
 export HTTPS_PROXY="$PROXY" HTTP_PROXY="$PROXY" ALL_PROXY="$PROXY"
 export NO_PROXY="localhost,127.0.0.1"
 export PATH="$CAC_DIR/shim-bin:$PATH"
-# OTel 遥测默认 off，显式置空防止外层误开
-export CLAUDE_CODE_ENABLE_TELEMETRY=
+# OTel 遥测默认 off
+export CLAUDE_CODE_ENABLE_TELEMETRY=0
 # 清除第三方 API 配置，强制走 OAuth 官方端点
 unset ANTHROPIC_BASE_URL
 unset ANTHROPIC_AUTH_TOKEN
 unset ANTHROPIC_API_KEY
 
-[[ -f "$_env_dir/tz" ]]   && export TZ=$(tr -d '[:space:]' < "$_env_dir/tz")
-[[ -f "$_env_dir/lang" ]] && export LANG=$(tr -d '[:space:]' < "$_env_dir/lang")
+[[ -f "$_env_dir/tz" ]]       && export TZ=$(tr -d '[:space:]' < "$_env_dir/tz")
+[[ -f "$_env_dir/lang" ]]     && export LANG=$(tr -d '[:space:]' < "$_env_dir/lang")
+[[ -f "$_env_dir/hostname" ]] && export HOSTNAME=$(tr -d '[:space:]' < "$_env_dir/hostname")
 
 # 执行真实 claude
 _real=$(tr -d '[:space:]' < "$CAC_DIR/real_claude")
@@ -179,13 +199,15 @@ if [[ ! -f "$_uuid_file" ]]; then
     exit 0
 fi
 FAKE_UUID=$(tr -d '[:space:]' < "$_uuid_file")
+_serial_file="$CAC_DIR/envs/$(tr -d '[:space:]' < "$CAC_DIR/current" 2>/dev/null)/serial"
+FAKE_SERIAL=$([ -f "$_serial_file" ] && tr -d '[:space:]' < "$_serial_file" || echo "C02FAKE000001")
 
 cat <<EOF
 +-o Root  <class IORegistryEntry, id 0x100000100, retain 11>
   +-o J314sAP  <class IOPlatformExpertDevice, id 0x100000101, registered, matched, active, busy 0 (0 ms), retain 28>
     {
       "IOPlatformUUID" = "$FAKE_UUID"
-      "IOPlatformSerialNumber" = "C02FAKE000001"
+      "IOPlatformSerialNumber" = "$FAKE_SERIAL"
       "manufacturer" = "Apple Inc."
       "model" = "Mac14,5"
     }
@@ -287,16 +309,21 @@ cmd_add() {
     [[ "$confirm" == "yes" ]] || { echo "已取消。"; exit 0; }
 
     mkdir -p "$env_dir"
-    echo "$proxy"           > "$env_dir/proxy"
-    echo "$(_new_uuid)"     > "$env_dir/uuid"
-    echo "$(_new_sid)"      > "$env_dir/stable_id"
-    echo "$(_new_user_id)"  > "$env_dir/user_id"
-    echo "$tz"              > "$env_dir/tz"
-    echo "$lang"            > "$env_dir/lang"
+    echo "$proxy"              > "$env_dir/proxy"
+    echo "$(_new_uuid)"        > "$env_dir/uuid"
+    echo "$(_new_sid)"         > "$env_dir/stable_id"
+    echo "$(_new_user_id)"     > "$env_dir/user_id"
+    echo "$(_new_serial)"      > "$env_dir/serial"
+    echo "$(_new_hostname)"    > "$env_dir/hostname"
+    echo "$tz"                 > "$env_dir/tz"
+    echo "$lang"               > "$env_dir/lang"
+    _minimal_claude_json "$(_read "$env_dir/user_id")" "$(_now_iso)" > "$env_dir/claude.json"
 
     echo
     echo "$(_green "✓") 环境 '$(_bold "$name")' 已创建"
     echo "  UUID     ：$(cat "$env_dir/uuid")"
+    echo "  Serial   ：$(cat "$env_dir/serial")"
+    echo "  Hostname ：$(cat "$env_dir/hostname")"
     echo "  stable_id：$(cat "$env_dir/stable_id")"
     echo "  TZ       ：$tz"
     echo "  LANG     ：$lang"
@@ -319,11 +346,11 @@ cmd_switch() {
         echo "警告：代理不可达，仍切换（启动 claude 时会拦截）"
     fi
 
+    _swap_claude_json "$name"
     echo "$name" > "$CAC_DIR/current"
     rm -f "$CAC_DIR/stopped"
 
     _update_statsig "$(_read "$ENVS_DIR/$name/stable_id")"
-    _update_claude_json_user_id "$(_read "$ENVS_DIR/$name/user_id")"
 
     echo "$(_green "✓") 已切换到 $(_bold "$name")"
 }

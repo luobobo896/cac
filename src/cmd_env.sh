@@ -55,16 +55,21 @@ cmd_add() {
     [[ "$confirm" == "yes" ]] || { echo "已取消。"; exit 0; }
 
     mkdir -p "$env_dir"
-    echo "$proxy"           > "$env_dir/proxy"
-    echo "$(_new_uuid)"     > "$env_dir/uuid"
-    echo "$(_new_sid)"      > "$env_dir/stable_id"
-    echo "$(_new_user_id)"  > "$env_dir/user_id"
-    echo "$tz"              > "$env_dir/tz"
-    echo "$lang"            > "$env_dir/lang"
+    echo "$proxy"              > "$env_dir/proxy"
+    echo "$(_new_uuid)"        > "$env_dir/uuid"
+    echo "$(_new_sid)"         > "$env_dir/stable_id"
+    echo "$(_new_user_id)"     > "$env_dir/user_id"
+    echo "$(_new_serial)"      > "$env_dir/serial"
+    echo "$(_new_hostname)"    > "$env_dir/hostname"
+    echo "$tz"                 > "$env_dir/tz"
+    echo "$lang"               > "$env_dir/lang"
+    _minimal_claude_json "$(_read "$env_dir/user_id")" "$(_now_iso)" > "$env_dir/claude.json"
 
     echo
     echo "$(_green "✓") 环境 '$(_bold "$name")' 已创建"
     echo "  UUID     ：$(cat "$env_dir/uuid")"
+    echo "  Serial   ：$(cat "$env_dir/serial")"
+    echo "  Hostname ：$(cat "$env_dir/hostname")"
     echo "  stable_id：$(cat "$env_dir/stable_id")"
     echo "  TZ       ：$tz"
     echo "  LANG     ：$lang"
@@ -87,11 +92,11 @@ cmd_switch() {
         echo "警告：代理不可达，仍切换（启动 claude 时会拦截）"
     fi
 
+    _swap_claude_json "$name"
     echo "$name" > "$CAC_DIR/current"
     rm -f "$CAC_DIR/stopped"
 
     _update_statsig "$(_read "$ENVS_DIR/$name/stable_id")"
-    _update_claude_json_user_id "$(_read "$ENVS_DIR/$name/user_id")"
 
     echo "$(_green "✓") 已切换到 $(_bold "$name")"
 }

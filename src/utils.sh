@@ -9,6 +9,25 @@ _yellow() { printf '\033[33m%s\033[0m' "$*"; }
 _new_uuid()    { uuidgen | tr '[:lower:]' '[:upper:]'; }
 _new_sid()     { uuidgen | tr '[:upper:]' '[:lower:]'; }
 _new_user_id() { python3 -c "import os; print(os.urandom(32).hex())"; }
+_new_serial()  { python3 -c "import random,string; print('C02'+''.join(random.choices(string.ascii_uppercase+string.digits,k=8)))"; }
+_new_hostname(){ python3 -c "import random; print('MacBook-Pro-%04X' % random.randint(0,0xFFFF))"; }
+_now_iso()     { python3 -c "import datetime; print(datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='milliseconds').replace('+00:00','Z'))"; }
+
+_minimal_claude_json() {
+    local user_id="$1" first_start="$2"
+    python3 -c "import json; print(json.dumps({
+        'numStartups': 0,
+        'installMethod': 'native',
+        'autoUpdates': False,
+        'tipsHistory': {},
+        'firstStartTime': '${first_start}',
+        'userID': '${user_id}',
+        'hasCompletedOnboarding': False,
+        'projects': {},
+        'githubRepoPaths': {},
+        'skillUsage': {}
+    }, indent=2))"
+}
 
 # host:port:user:pass → http://user:pass@host:port
 _parse_proxy() {
@@ -66,16 +85,16 @@ _update_statsig() {
     done
 }
 
-_update_claude_json_user_id() {
-    local user_id="$1"
+_swap_claude_json() {
+    local new_name="$1"
     local claude_json="$HOME/.claude.json"
-    [[ -f "$claude_json" ]] || return 0
-    python3 -c "
-import json, sys
-with open('$claude_json') as f:
-    d = json.load(f)
-d['userID'] = '$user_id'
-with open('$claude_json', 'w') as f:
-    json.dump(d, f, indent=2, ensure_ascii=False)
-" && return 0 || echo "警告：更新 ~/.claude.json userID 失败" >&2
+    # 备份当前 profile 的 JSON
+    local current_name; current_name=$(_current_env)
+    if [[ -n "$current_name" && -f "$claude_json" && -d "$ENVS_DIR/$current_name" ]]; then
+        cp "$claude_json" "$ENVS_DIR/$current_name/claude.json"
+    fi
+    # 恢复新 profile 的 JSON
+    if [[ -f "$ENVS_DIR/$new_name/claude.json" ]]; then
+        cp "$ENVS_DIR/$new_name/claude.json" "$claude_json"
+    fi
 }
