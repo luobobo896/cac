@@ -22,9 +22,18 @@
 
 ### 为什么需要 cac
 
-Claude Code 在运行过程中会读取并上报设备标识符（硬件 UUID、安装 ID、网络出口 IP 等）。cac 通过 wrapper 机制拦截所有 `claude` 调用，在进程层面同时解决两个问题：
+Claude Code 在运行过程中会读取并上报多维设备标识符：
 
-**A. 隐私隔离** — 每个配置对外呈现独立的设备身份，彻底隔离真实设备指纹。
+- **硬件层**：硬件 UUID、序列号（通过 `ioreg` 读取）、主机名（`os.hostname()`）
+- **账号层**：`stable_id`、`userID`（存储于 `~/.claude/statsig/` 和 `~/.claude.json`）
+- **行为层**：首次启动时间、累计启动次数、使用记录、本地项目路径（均记录于 `~/.claude.json`）
+- **网络层**：出口 IP
+
+单独换代理或只改 userID 不够——只要其余字段不变，多个账号仍可被关联为同一设备。
+
+cac 通过 wrapper 机制拦截所有 `claude` 调用，在进程层面同时解决两个问题：
+
+**A. 隐私隔离** — 每个配置独立管理全套设备标识，切换时原子替换所有字段，对外呈现完全独立的设备身份。
 
 **B. CLI 专属代理** — 进程级注入代理，`claude` 流量直连远端代理服务器。无需 Clash / Shadowrocket 等本地代理工具，无需中转，无需起本地服务端。配合静态住宅 IP，获得固定、干净的出口身份。
 
@@ -157,9 +166,18 @@ claude
 
 ### Why cac
 
-Claude Code reads and reports device identifiers at runtime (hardware UUID, installation ID, network egress IP, etc.). cac intercepts all `claude` invocations via a wrapper, solving two problems at the process level:
+Claude Code reads and reports multiple device identifiers at runtime:
 
-**A. Privacy Cloak** — Each profile presents an independent device identity, fully isolating your real device fingerprint.
+- **Hardware**: UUID and serial number (via `ioreg`), hostname (via `os.hostname()`)
+- **Account**: `stable_id` and `userID` (stored in `~/.claude/statsig/` and `~/.claude.json`)
+- **Behavioral**: first-launch timestamp, startup count, usage history, local project paths (all recorded in `~/.claude.json`)
+- **Network**: egress IP
+
+Swapping a proxy or changing only the userID is not enough — as long as other fields remain the same, multiple accounts can still be correlated to the same device.
+
+cac intercepts all `claude` invocations via a wrapper, solving two problems at the process level:
+
+**A. Privacy Cloak** — Each profile manages a full set of independent device identifiers. On switch, all fields are replaced atomically, presenting a completely isolated device identity.
 
 **B. CLI Proxy** — Process-level proxy injection; `claude` traffic connects directly to the remote proxy server. No Clash / Shadowrocket or any local proxy tools needed. No relay, no local server. Pair with a static residential IP for a fixed, clean egress identity.
 
