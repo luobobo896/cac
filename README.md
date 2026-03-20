@@ -48,7 +48,7 @@ Claude Code 在运行过程中会读取并上报设备标识符（硬件 UUID、
 **一键安装（推荐）：**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nmhjklnm/cac/master/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/luobobo896/cac/master/install.sh | bash
 ```
 
 安装脚本会自动完成：将 `cac` 放入 `~/bin`、在 `~/.zshrc` 中添加 PATH、生成 wrapper 和 ioreg shim。
@@ -56,7 +56,7 @@ curl -fsSL https://raw.githubusercontent.com/nmhjklnm/cac/master/install.sh | ba
 **手动安装：**
 
 ```bash
-git clone https://github.com/nmhjklnm/cac.git
+git clone https://github.com/luobobo896/cac.git
 cd cac
 bash install.sh
 ```
@@ -177,7 +177,7 @@ All `claude` invocations (including Agent subprocesses) are intercepted by the w
 **One-line install (recommended):**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nmhjklnm/cac/master/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/luobobo896/cac/master/install.sh | bash
 ```
 
 The install script automatically: places `cac` in `~/bin`, adds PATH to `~/.zshrc`, and generates the wrapper and ioreg shim.
@@ -185,7 +185,7 @@ The install script automatically: places `cac` in `~/bin`, adds PATH to `~/.zshr
 **Manual install:**
 
 ```bash
-git clone https://github.com/nmhjklnm/cac.git
+git clone https://github.com/luobobo896/cac.git
 cd cac
 bash install.sh
 ```
