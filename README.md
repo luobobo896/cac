@@ -33,9 +33,12 @@ Claude Code 在运行过程中会读取并上报设备标识符（硬件 UUID、
 | | 特性 | 说明 |
 |:---|:---|:---|
 | **A** | 硬件 UUID 隔离 | 拦截 `ioreg`，每个配置返回独立 UUID |
+| **A** | 序列号隔离 | 拦截 `ioreg`，每个配置返回独立序列号 |
 | **A** | stable_id / userID 隔离 | 切换配置时自动写入独立标识 |
+| **A** | 行为数据隔离 | 切换配置时整体替换 `~/.claude.json`，隔离首次启动时间、使用记录、项目路径等行为字段 |
+| **A** | 主机名伪装 | 注入独立 `HOSTNAME`，防止 `os.hostname()` 泄露真实机器名 |
 | **A** | 时区 / 语言伪装 | 根据代理出口地区自动匹配 |
-| **A** | 遥测关闭 | 置空 `CLAUDE_CODE_ENABLE_TELEMETRY` |
+| **A** | 遥测关闭 | 显式设置 `CLAUDE_CODE_ENABLE_TELEMETRY=0` |
 | **B** | 进程级代理 | 直接注入 `HTTPS_PROXY` / `HTTP_PROXY` / `ALL_PROXY` |
 | **B** | 免本地服务端 | 无需 Clash / Shadowrocket / TUN，CLI 直连 |
 | **B** | 静态住宅 IP 支持 | 配置固定代理 → 固定出口 IP |
@@ -124,10 +127,13 @@ claude
     └── <name>/
         ├── proxy       # http://user:pass@host:port
         ├── uuid        # 独立硬件 UUID
+        ├── serial      # 独立序列号（如 C02XXXXXXXX）
         ├── stable_id   # 独立 stable_id
         ├── user_id     # 独立 userID
+        ├── hostname    # 独立主机名（如 MacBook-Pro-A3F1）
         ├── tz          # 时区（如 America/New_York）
-        └── lang        # 语言（如 en_US.UTF-8）
+        ├── lang        # 语言（如 en_US.UTF-8）
+        └── claude.json # ~/.claude.json 快照（首次启动时间、使用记录、项目路径等）
 ```
 
 ### 注意事项
@@ -162,9 +168,12 @@ Claude Code reads and reports device identifiers at runtime (hardware UUID, inst
 | | Feature | Description |
 |:---|:---|:---|
 | **A** | Hardware UUID isolation | Intercepts `ioreg`, returns profile-specific UUID |
+| **A** | Serial number isolation | Intercepts `ioreg`, returns profile-specific serial number |
 | **A** | stable_id / userID isolation | Writes independent identifiers on profile switch |
+| **A** | Behavioral data isolation | Swaps entire `~/.claude.json` on profile switch — isolates first-launch timestamp, usage history, project paths, and other behavioral fields |
+| **A** | Hostname spoofing | Injects independent `HOSTNAME` to prevent `os.hostname()` from leaking the real machine name |
 | **A** | Timezone / locale spoofing | Auto-detected from proxy exit region |
-| **A** | Telemetry disabled | Clears `CLAUDE_CODE_ENABLE_TELEMETRY` |
+| **A** | Telemetry disabled | Explicitly sets `CLAUDE_CODE_ENABLE_TELEMETRY=0` |
 | **B** | Process-level proxy | Injects `HTTPS_PROXY` / `HTTP_PROXY` / `ALL_PROXY` directly |
 | **B** | No local server needed | No Clash / Shadowrocket / TUN — direct CLI connection |
 | **B** | Static residential IP support | Fixed proxy config = fixed egress IP |
@@ -253,10 +262,13 @@ On first use, run `/login` inside Claude Code to authenticate.
     └── <name>/
         ├── proxy       # http://user:pass@host:port
         ├── uuid        # independent hardware UUID
+        ├── serial      # independent serial number (e.g. C02XXXXXXXX)
         ├── stable_id   # independent stable_id
         ├── user_id     # independent userID
+        ├── hostname    # independent hostname (e.g. MacBook-Pro-A3F1)
         ├── tz          # timezone (e.g. America/New_York)
-        └── lang        # locale (e.g. en_US.UTF-8)
+        ├── lang        # locale (e.g. en_US.UTF-8)
+        └── claude.json # ~/.claude.json snapshot (first-launch time, usage history, project paths, etc.)
 ```
 
 ### Notes
