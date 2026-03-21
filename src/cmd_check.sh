@@ -6,7 +6,7 @@ cmd_check() {
     local current; current=$(_current_env)
 
     if [[ -f "$CAC_DIR/stopped" ]]; then
-        echo "$(_yellow "⚠ cac 已停用（cacstop）") — claude 裸跑中"
+        echo "$(_yellow "⚠ cac 已停用（cacstop）") — 受控 CLI 裸跑中"
         echo "  恢复：cac ${current:-<name>}"
         return
     fi

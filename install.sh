@@ -11,7 +11,7 @@ green() { printf '\033[32m%s\033[0m\n' "$*"; }
 yellow() { printf '\033[33m%s\033[0m\n' "$*"; }
 red() { printf '\033[31m%s\033[0m\n' "$*"; }
 
-echo "=== cac — Claude Code Cloak 安装 ==="
+echo "=== cac — Multi-CLI Cloak 安装 ==="
 echo
 
 # 1. 下载 cac 到 ~/bin
@@ -36,9 +36,9 @@ if [[ -n "$RC_FILE" ]]; then
         printf "写入 PATH 到 %s ... " "$RC_FILE"
         cat >> "$RC_FILE" << 'EOF'
 
-# cac — Claude Code Cloak
+# cac — Multi-CLI Cloak
 export PATH="$HOME/bin:$PATH"          # cac 命令
-export PATH="$HOME/.cac/bin:$PATH"     # claude wrapper（必须最前）
+export PATH="$HOME/.cac/bin:$PATH"     # cli wrappers（claude/codex/gemini，必须最前）
 EOF
         green "✓"
     else
@@ -53,8 +53,12 @@ fi
 # 3. 初始化 wrapper 和 ioreg shim
 printf "初始化 ... "
 export PATH="$BIN_DIR:$PATH"
-"$BIN_DIR/cac" setup 2>&1 | grep -E "✓|错误" || true
-green "✓"
+if "$BIN_DIR/cac" setup; then
+    green "✓"
+else
+    red "✗ setup 失败，请先修复后重试"
+    exit 1
+fi
 
 echo
 green "✓ 安装完成"
@@ -64,3 +68,4 @@ echo "  source $RC_FILE"
 echo
 echo "然后添加第一个代理配置："
 echo "  cac add <名字> <host:port:user:pass>"
+echo "  cac add --socks5 <名字> <host:port:user:pass>"

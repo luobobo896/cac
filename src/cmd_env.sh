@@ -2,13 +2,28 @@
 
 cmd_add() {
     _require_setup
-    if [[ $# -lt 2 ]]; then
-        echo "用法：cac add <名字> <host:port:user:pass>" >&2
-        echo "示例：cac add us1 1.2.3.4:1080:username:password" >&2
+    local scheme="http"
+    if [[ "${1:-}" == "--socks5" ]]; then
+        scheme="socks5"
+        shift
+    fi
+
+    if [[ $# -lt 2 || $# -gt 3 ]]; then
+        echo "用法：cac add [--socks5] <名字> <host:port[:user:pass]>" >&2
+        echo "示例(HTTP)：cac add us1 1.2.3.4:1080:username:password" >&2
+        echo "示例(SOCKS5)：cac add --socks5 us1 1.2.3.4:1080:username:password" >&2
         exit 1
     fi
 
     local name="$1" raw_proxy="$2"
+    if [[ $# -eq 3 ]]; then
+        if [[ "$3" == "--socks5" ]]; then
+            scheme="socks5"
+        else
+            echo "错误：不支持的参数 '$3'，仅支持 --socks5" >&2
+            exit 1
+        fi
+    fi
     local env_dir="$ENVS_DIR/$name"
 
     if [[ -d "$env_dir" ]]; then
@@ -17,9 +32,10 @@ cmd_add() {
     fi
 
     local proxy
-    proxy=$(_parse_proxy "$raw_proxy")
+    proxy=$(_parse_proxy "$raw_proxy" "$scheme")
 
     echo "即将创建环境：$(_bold "$name")"
+    echo "  协议：$scheme"
     echo "  代理：$proxy"
     echo
 
@@ -55,6 +71,10 @@ cmd_add() {
     [[ "$confirm" == "yes" ]] || { echo "已取消。"; exit 0; }
 
     mkdir -p "$env_dir"
+    mkdir -p "$env_dir/codex-state/codex-home" "$env_dir/codex-state/xdg/config" \
+             "$env_dir/codex-state/xdg/cache" "$env_dir/codex-state/xdg/data" "$env_dir/codex-state/xdg/state"
+    mkdir -p "$env_dir/gemini-state/gemini-home" "$env_dir/gemini-state/xdg/config" \
+             "$env_dir/gemini-state/xdg/cache" "$env_dir/gemini-state/xdg/data" "$env_dir/gemini-state/xdg/state"
     echo "$proxy"              > "$env_dir/proxy"
     echo "$(_new_uuid)"        > "$env_dir/uuid"
     echo "$(_new_sid)"         > "$env_dir/stable_id"
@@ -89,14 +109,19 @@ cmd_switch() {
         echo "$(_green "✓ 可达")"
     else
         echo "$(_yellow "⚠ 不通")"
-        echo "警告：代理不可达，仍切换（启动 claude 时会拦截）"
+        echo "警告：代理不可达，仍切换（启动受控 CLI 时会拦截）"
     fi
 
-    _swap_claude_json "$name"
+    if [[ -f "$CAC_DIR/real_claude" ]]; then
+        _swap_claude_json "$name"
+    fi
+
     echo "$name" > "$CAC_DIR/current"
     rm -f "$CAC_DIR/stopped"
 
-    _update_statsig "$(_read "$ENVS_DIR/$name/stable_id")"
+    if [[ -f "$CAC_DIR/real_claude" ]]; then
+        _update_statsig "$(_read "$ENVS_DIR/$name/stable_id")"
+    fi
 
     echo "$(_green "✓") 已切换到 $(_bold "$name")"
 }

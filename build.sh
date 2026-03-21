@@ -20,7 +20,7 @@ SOURCES=(
 
 {
     echo '#!/usr/bin/env bash'
-    echo '# cac — Claude Anti-fingerprint Cloak'
+    echo '# cac — Multi-CLI Anti-fingerprint Cloak'
     echo '# 由 build.sh 从 src/ 构建，勿直接编辑本文件'
     echo 'set -euo pipefail'
     echo

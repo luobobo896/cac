@@ -29,22 +29,36 @@ _minimal_claude_json() {
     }, indent=2))"
 }
 
-# host:port:user:pass → http://user:pass@host:port
+# host:port:user:pass + scheme(http/socks5) → scheme://user:pass@host:port
+# 注意：socks5 会归一化为 socks5h，确保 DNS 解析在代理端执行。
+# 若 raw 已是完整 URI（含 ://），则仅对 socks5:// 做归一化后返回。
 _parse_proxy() {
-    local raw="$1"
+    local raw="$1" scheme="${2:-http}"
     local host port user pass
+    if [[ "$scheme" == "socks5" ]]; then
+        scheme="socks5h"
+    fi
+    if [[ "$raw" == *"://"* ]]; then
+        raw=$(echo "$raw" | sed 's#^[sS][oO][cC][kK][sS]5://#socks5h://#')
+        echo "$raw"
+        return 0
+    fi
     host=$(echo "$raw" | cut -d: -f1)
     port=$(echo "$raw" | cut -d: -f2)
     user=$(echo "$raw" | cut -d: -f3)
     pass=$(echo "$raw" | cut -d: -f4)
+    if [[ -z "$host" || -z "$port" ]]; then
+        echo "错误：代理格式错误，应为 host:port 或 host:port:user:pass" >&2
+        return 1
+    fi
     if [[ -z "$user" ]]; then
-        echo "http://${host}:${port}"
+        echo "${scheme}://${host}:${port}"
     else
-        echo "http://${user}:${pass}@${host}:${port}"
+        echo "${scheme}://${user}:${pass}@${host}:${port}"
     fi
 }
 
-# socks5://user:pass@host:port → host:port
+# scheme://user:pass@host:port → host:port
 _proxy_host_port() {
     echo "$1" | sed 's|.*@||' | sed 's|.*://||'
 }
@@ -61,7 +75,7 @@ _current_env()  { _read "$CAC_DIR/current"; }
 _env_dir()      { echo "$ENVS_DIR/$1"; }
 
 _require_setup() {
-    [[ -f "$CAC_DIR/real_claude" ]] || {
+    compgen -G "$CAC_DIR/real_*" > /dev/null || {
         echo "错误：请先运行 'cac setup'" >&2; exit 1
     }
 }
@@ -72,9 +86,10 @@ _require_env() {
     }
 }
 
-_find_real_claude() {
+_find_real_cmd() {
+    local cmd="$1"
     PATH=$(echo "$PATH" | tr ':' '\n' | grep -v "$CAC_DIR/bin" | tr '\n' ':') \
-        command -v claude 2>/dev/null || true
+        command -v "$cmd" 2>/dev/null || true
 }
 
 _update_statsig() {
